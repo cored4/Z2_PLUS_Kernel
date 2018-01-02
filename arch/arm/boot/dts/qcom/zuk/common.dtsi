@@ -18,6 +18,7 @@
 		/delete-property/ i2c12;
 		/delete-property/ spi12;
 	};
+	/delete-node/ firmware;
 };
 
 &soc {
@@ -359,12 +360,4 @@
 
 &i2c_8 {
 	/delete-node/ nq@28;
-};
-
-&firmware {
-	android {
-		fstab {
-			/delete-node/ vendor;
-		};
-	};
 };
