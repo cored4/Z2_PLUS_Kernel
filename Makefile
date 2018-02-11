@@ -655,11 +655,6 @@ KBUILD_CFLAGS   += $(call cc-option,-fno-store-merging,)
 KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
 KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
 
-# Strip linker
-LDFLAGS		+= --strip-debug -O3
-
-KBUILD_CFLAGS	+= -O3 -pipe
-
 # These flags need a special toolchain so split them off
 KBUILD_CFLAGS	+= $(call cc-option,-mlow-precision-recip-sqrt,) \
 		   $(call cc-option,-mpc-relative-literal-loads,)
