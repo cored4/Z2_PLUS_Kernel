@@ -21,7 +21,6 @@
 #include <linux/irq.h>
 #include <linux/workqueue.h>
 #include "gt9xx.h"
-#define KEY_FINGERPRINT 0x2ee
 #if GTP_ICS_SLOT_REPORT
 	#include <linux/input/mt.h>
 #endif
@@ -613,13 +612,9 @@ static void goodix_ts_work_func(struct work_struct *work)
 				case 0xAA: case 0xBB: case 0xAB: case 0xBA:
 					GTP_INFO("Swipe to light up the screen!");
 					doze_status = DOZE_WAKEUP;
-					input_report_key(ts->input_dev, KEY_FINGERPRINT, 1);
-					input_sync(ts->input_dev);
 					input_report_key(ts->input_dev, KEY_POWER, 1);
 					input_sync(ts->input_dev);
 					input_report_key(ts->input_dev, KEY_POWER, 0);
-					input_sync(ts->input_dev);
-					input_report_key(ts->input_dev, KEY_FINGERPRINT, 0);
 					input_sync(ts->input_dev);
 					// clear 0x814B
 					doze_buf[2] = 0x00;
@@ -628,13 +623,9 @@ static void goodix_ts_work_func(struct work_struct *work)
 				case 0xCC:
 					GTP_INFO("Double click to light up the screen!");
 					doze_status = DOZE_WAKEUP;
-					input_report_key(ts->input_dev, KEY_FINGERPRINT, 1);
-					input_sync(ts->input_dev);
 					input_report_key(ts->input_dev, KEY_GESTURE_DT, 1);
 					input_sync(ts->input_dev);
 					input_report_key(ts->input_dev, KEY_GESTURE_DT, 0);
-					input_sync(ts->input_dev);
-					input_report_key(ts->input_dev, KEY_FINGERPRINT, 0);
 					input_sync(ts->input_dev);
 					// clear 0x814B
 					doze_buf[2] = 0x00;
@@ -1798,7 +1789,6 @@ static s8 gtp_request_input_dev(struct goodix_ts_data *ts)
 
 #if GTP_GESTURE_WAKEUP
 	input_set_capability(ts->input_dev, EV_KEY, KEY_GESTURE_DT);
-	input_set_capability(ts->input_dev, EV_KEY, KEY_FINGERPRINT);
 	input_set_capability(ts->input_dev, EV_KEY, KEY_POWER);
 #endif 
 
