@@ -20,6 +20,7 @@
 
 #include <linux/irq.h>
 #include <linux/workqueue.h>
+#include <linux/state_notifier.h>
 #include "gt9xx.h"
 #if GTP_ICS_SLOT_REPORT
 	#include <linux/input/mt.h>
@@ -623,6 +624,7 @@ static void goodix_ts_work_func(struct work_struct *work)
 				case 0xCC:
 					GTP_INFO("Double click to light up the screen!");
 					doze_status = DOZE_WAKEUP;
+					state_boost();
 					input_report_key(ts->input_dev, KEY_GESTURE_DT, 1);
 					input_sync(ts->input_dev);
 					input_report_key(ts->input_dev, KEY_GESTURE_DT, 0);
@@ -3090,8 +3092,7 @@ static int __init goodix_ts_init(void)
 	GTP_DEBUG_FUNC();   
 	GTP_INFO("GTP driver installing...");
 	goodix_wq = alloc_workqueue("goodix_wq", WQ_HIGHPRI | 
-								WQ_UNBOUND | WQ_FREEZABLE | 
-								WQ_MEM_RECLAIM, 0);
+								WQ_UNBOUND | WQ_MEM_RECLAIM, 0);
 	if (!goodix_wq) {
 		GTP_ERROR("Creat workqueue failed.");
 		return -ENOMEM;
