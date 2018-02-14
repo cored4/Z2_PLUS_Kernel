@@ -23,12 +23,7 @@ ARM_ARCH_OPT	:= -mcpu=kryo
 # mtune (in which case, wtf?), don't tune at all (march can break assembly)
 KBUILD_CFLAGS	+= $(call cc-option,$(ARM_ARCH_OPT),)
 
-ifeq ($(cc-name),clang)
-KBUILD_CFLAGS	+= -mno-implicit-float
-else
 KBUILD_CFLAGS	+= -mgeneral-regs-only
-endif
-KBUILD_CFLAGS	+= $(lseinstr)
 KBUILD_CFLAGS	+= -fno-pic
 KBUILD_CFLAGS	+= $(call cc-option, -mpc-relative-literal-loads)
 
