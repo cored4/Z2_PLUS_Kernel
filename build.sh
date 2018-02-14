@@ -25,7 +25,7 @@ compile()
 ramdisk() 
 {
 	cd ${objdir}
-	cp -f arch/arm64/boot/Image.gz-dtb $builddir/Image.gz-dtb
+	mv -f arch/arm64/boot/Image.gz-dtb $builddir/Image.gz-dtb
 }
 make_a_fucking_defconfig
 compile 
