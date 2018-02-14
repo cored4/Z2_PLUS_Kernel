@@ -6,12 +6,11 @@ export SUBARCH=arm64
 export LOCALVERSION="-R2_0.01c"
 export KBUILD_BUILD_USER="ST12"
 export KBUILD_BUILD_HOST="BLR"
-export COMPILER_NAME="DTC-5.0"
+export COMPILER_NAME="DTC-7.0"
 export CLANG_TRIPLE="aarch64-linux-gnu-"
 export CROSS_COMPILE="${HOME}/build/z2/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-"
-export CLANG_TCHAIN="${HOME}/build/z2/dtc-5.0/bin/clang"
+export CLANG_TCHAIN="${HOME}/build/z2/dtc-7.0/bin/clang"
 export LD_LIBRARY_PATH="${TOOL_CHAIN_PATH}/../lib"
-export PATH=$PATH:${TOOL_CHAIN_PATH}
 export objdir="${kernel_dir}/out"
 export builddir="${kernel_dir}/build"
 cd $kernel_dir
@@ -26,7 +25,7 @@ compile()
 ramdisk() 
 {
 	cd ${objdir}
-	cp arch/arm64/boot/Image.gz-dtb $builddir/Image.gz-dtb
+	cp -f arch/arm64/boot/Image.gz-dtb $builddir/Image.gz-dtb
 }
 make_a_fucking_defconfig
 compile 
