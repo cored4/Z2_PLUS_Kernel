@@ -205,8 +205,8 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 
 	if (likely(!state_suspended))
 		freq = (freq + (freq >> 2)) * util / max;
-	else if (policy->cpu != 0)
-		freq = policy->min;
+	else
+		freq = freq * util / max;;
 
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;
