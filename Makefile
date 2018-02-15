@@ -390,9 +390,7 @@ OPT_FLAGS := -O3 \
 		-fopenmp \
 		-fvectorize \
 		-fslp-vectorize \
-		-fno-signed-zeros \
-		-fno-standalone-debug \
-		-mcpu=kryo -mcrc \
+		-mcpu=kryo -marm \
 		-freroll-loops -mhvx -mhvx-double \
 		$(POLLY_FLAGS)
 
