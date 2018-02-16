@@ -24,8 +24,6 @@ unsigned int top_app_idx = 0;
 int default_topapp_boost = 0;
 struct cgroup_subsys_state *topapp_css;
 #endif /* CONFIG_DYNAMIC_STUNE_BOOST */
-/* We hold schedtune boost in effect for at least this long */
-#define SCHEDTUNE_BOOST_HOLD_NS 50000000ULL
 
 /* Performance Boost region (B) threshold params */
 static int perf_boost_idx;
@@ -234,14 +232,11 @@ struct boost_groups {
 	/* Maximum boost value for all RUNNABLE tasks on a CPU */
 	bool idle;
 	int boost_max;
-	ktime_t closest_timeout;
 	struct {
 		/* The boost for tasks on that boost group */
 		int boost;
 		/* Count of RUNNABLE tasks on that boost group */
 		unsigned tasks;
-		/* Timestamp of boost cancellation */
-		ktime_t timeout;
 	} group[BOOSTGROUPS_COUNT];
 	/* CPU's boost group locking */
 	raw_spinlock_t lock;
@@ -250,54 +245,9 @@ struct boost_groups {
 /* Boost groups affecting each CPU in the system */
 static DEFINE_PER_CPU(struct boost_groups, cpu_boost_groups);
 
-/*
- * Identify if a particular boost group is active.
- * Calling this function also clears timeouts as
- * necessary.
- */
-static inline bool
-schedtune_boost_group_active(int cpu, int idx, ktime_t now)
-{
-	struct boost_groups *bg;
-
-	bg = &per_cpu(cpu_boost_groups, cpu);
-
-	if (bg->group[idx].timeout.tv64 &&
-		ktime_after(now, bg->group[idx].timeout))
-		bg->group[idx].timeout.tv64 = 0;
-
-	if (bg->group[idx].tasks)
-		return true;
-
-	if (bg->group[idx].timeout.tv64)
-		return true;
-
-	return false;
-}
-
-static inline bool
-schedtune_boost_group_before(int cpu, int idx, ktime_t ts)
-{
-	struct boost_groups *bg;
-
-	bg = &per_cpu(cpu_boost_groups, cpu);
-
-	if (!ts.tv64)
-		return false;
-
-	if (!bg->group[idx].timeout.tv64)
-		return true;
-
-	if (ktime_before(bg->group[idx].timeout, ts))
-		return true;
-
-	return false;
-}
-
 static void
-schedtune_cpu_update(int cpu, ktime_t now)
+schedtune_cpu_update(int cpu)
 {
-	ktime_t next_timeout = { 0 };
 	struct boost_groups *bg;
 	int boost_max = INT_MIN;
 	int idx;
@@ -307,29 +257,18 @@ schedtune_cpu_update(int cpu, ktime_t now)
 	for (idx = 0; idx < BOOSTGROUPS_COUNT; ++idx) {
 		/*
 		 * A boost group affects a CPU only if it has
-		 * RUNNABLE tasks on that CPU or it has hold
-		 * in effect from a previous task.
+		 * RUNNABLE tasks on that CPU
 		 */
-		if (!schedtune_boost_group_active(cpu, idx, now))
+		if (bg->group[idx].tasks == 0)
 			continue;
 
-		if(!next_timeout.tv64 ||
-			schedtune_boost_group_before(cpu, idx, next_timeout)) {
-			next_timeout =  bg->group[idx].timeout;
-		}
-
-		/* this boost group is active */
-		if (boost_max > bg->group[idx].boost)
-			continue;
-
-		boost_max = bg->group[idx].boost;
+		boost_max = max(boost_max, bg->group[idx].boost);
 	}
 
 	/* If there are no active boost groups on the CPU, set no boost  */
 	if (boost_max == INT_MIN)
 		boost_max = 0;
 	bg->boost_max = boost_max;
-	bg->closest_timeout = next_timeout;
 }
 
 static int
@@ -337,7 +276,6 @@ schedtune_boostgroup_update(int idx, int boost)
 {
 	struct boost_groups *bg;
 	int cur_boost_max;
-	ktime_t now = ktime_get();
 	int old_boost;
 	int cpu;
 
@@ -356,25 +294,16 @@ schedtune_boostgroup_update(int idx, int boost)
 		/* Update the boost value of this boost group */
 		bg->group[idx].boost = boost;
 
-		/*
-		 * Check if this update increase current max.
-		 * Check boost_group_active first as it also
-		 * handles timeouts for us.
-		 */
-		if (schedtune_boost_group_active(cpu, idx, now) &&
-			boost > cur_boost_max){
-
+		/* Check if this update increase current max */
+		if (boost > cur_boost_max && bg->group[idx].tasks) {
 			bg->boost_max = boost;
-			if (schedtune_boost_group_before(cpu, idx, bg->closest_timeout))
-				bg->closest_timeout = bg->group[idx].timeout;
-
 			trace_sched_tune_boostgroup_update(cpu, 1, bg->boost_max);
 			continue;
 		}
 
 		/* Check if this update has decreased current max */
 		if (cur_boost_max == old_boost && old_boost > boost) {
-			schedtune_cpu_update(cpu, now);
+			schedtune_cpu_update(cpu);
 			trace_sched_tune_boostgroup_update(cpu, -1, bg->boost_max);
 			continue;
 		}
@@ -393,23 +322,16 @@ schedtune_tasks_update(struct task_struct *p, int cpu, int idx, int task_count)
 {
 	struct boost_groups *bg = &per_cpu(cpu_boost_groups, cpu);
 	int tasks = bg->group[idx].tasks + task_count;
-	ktime_t now = ktime_get();
 
 	/* Update boosted tasks count while avoiding to make it negative */
 	bg->group[idx].tasks = max(0, tasks);
-	/* Update timeout on enqueue */
-	if (task_count > 0) {
-		ktime_t tt = ktime_add_ns(now,
-				SCHEDTUNE_BOOST_HOLD_NS);
 
-		bg->group[idx].timeout = tt;
-	}
 	trace_sched_tune_tasks_update(p, cpu, tasks, idx,
-			bg->group[idx].boost, bg->boost_max,
-			bg->group[idx].timeout);
+			bg->group[idx].boost, bg->boost_max);
 
 	/* Boost group activation or deactivation on that RQ */
-	schedtune_cpu_update(cpu, now);
+	if (tasks == 1 || tasks == 0)
+		schedtune_cpu_update(cpu);
 }
 
 /*
@@ -455,7 +377,6 @@ int schedtune_can_attach(struct cgroup_subsys_state *css,
 			  struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
-	ktime_t now = ktime_get();
 	struct boost_groups *bg;
 	unsigned long irq_flags;
 	unsigned int cpu;
@@ -511,13 +432,13 @@ int schedtune_can_attach(struct cgroup_subsys_state *css,
 		tasks = bg->group[src_bg].tasks - 1;
 		bg->group[src_bg].tasks = max(0, tasks);
 		bg->group[dst_bg].tasks += 1;
-		bg->group[dst_bg].timeout = ktime_add_ns(now, SCHEDTUNE_BOOST_HOLD_NS);
 
 		raw_spin_unlock(&bg->lock);
 		unlock_rq_of(rq, task, &irq_flags);
 
 		/* Update CPU boost group */
-		schedtune_cpu_update(task_cpu(task), now);
+		if (bg->group[src_bg].tasks == 0 || bg->group[dst_bg].tasks == 1)
+			schedtune_cpu_update(task_cpu(task));
 
 	}
 
@@ -602,15 +523,6 @@ int schedtune_cpu_boost(int cpu)
 	struct boost_groups *bg;
 
 	bg = &per_cpu(cpu_boost_groups, cpu);
-
-	/* check to see if we have a hold in effect */
-	if (bg->closest_timeout.tv64) {
-		ktime_t now = ktime_get();
-
-		if (ktime_after(now, bg->closest_timeout))
-			schedtune_cpu_update(cpu, now);
-	}
-
 	return bg->boost_max;
 }
 
