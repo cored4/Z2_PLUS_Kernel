@@ -386,13 +386,14 @@ POLLY_FLAGS := -mllvm -polly \
 		-mllvm -polly-detect-keep-going \
 		-mllvm -polly-vectorizer=stripmine \
 
-OPT_FLAGS := -O3 \
-		-fopenmp \
-		-fvectorize \
-		-fslp-vectorize \
-		-mcpu=kryo -marm \
-		-freroll-loops -mhvx -mhvx-double \
-		$(POLLY_FLAGS)
+ARM_OPT_FLAGS := -mcpu=kryo \
+		-mhvx -mhvx-double -marm \
+		-mno-fix-cortex-a53-835769 \
+
+OPT_FLAGS := -O3 -pipe \
+		-fopenmp -fvectorize \
+		-fslp-vectorize -freroll-loops  \
+		$(POLLY_FLAGS) $(ARM_OPT_FLAGS) \
 
 ifeq ($(cc-name),clang)
 ifneq ($(CROSS_COMPILE),)
