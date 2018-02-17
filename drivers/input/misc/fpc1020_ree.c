@@ -50,7 +50,6 @@ struct fpc1020_data {
 	/*Input device*/
 	struct input_dev *input_dev;
 	u8  report_key;
-	struct wakeup_source wakeup;
 	bool __read_mostly screen_on;
 	bool home_pressed;
 	bool irq_disabled;
@@ -228,7 +227,7 @@ static void fpc1020_irq_work(struct work_struct *work)
 
 	if (!fpc1020->screen_on) {
 		state_boost();
-		__pm_wakeup_event(&fpc1020->wakeup, 5000);
+		pm_wakeup_event(fpc1020->dev, 5000);
 	}
 }
 	
@@ -344,12 +343,12 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 	
 	/* Escalate fingerprintd priority when screen is off */
 	if (fpc1020->screen_on) {
-		__pm_relax(&fpc1020->wakeup);
+		pm_relax(fpc1020->dev);
 		set_fingerprintd_nice(0);
 	}
 	
 	if (!fpc1020->screen_on) {
-		__pm_relax(&fpc1020->wakeup);
+		pm_relax(fpc1020->dev);
 		set_fingerprintd_nice(-1);
 		enable_irq_wake(fpc1020->irq);
 	}
@@ -454,7 +453,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_destroy_workqueue;
 	}
 	set_fpc_irq(fpc1020, true);
-	wakeup_source_init(&fpc1020->wakeup, "fpc_wakeup");
+	device_init_wakeup(dev, true);
 	spin_lock_init(&fpc1020->irq_lock);
 	
 	retval = fpc1020_initial_irq(fpc1020);
