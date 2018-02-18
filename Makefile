@@ -378,6 +378,10 @@ CFLAGS_KERNEL	=
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 
+#
+# Clang opt flags
+#
+ifeq ($(COMPILER),clang)
 POLLY_FLAGS := -mllvm -polly \
 		-mllvm -polly-run-dce \
 		-mllvm -polly-run-inliner \
@@ -393,8 +397,13 @@ ARM_OPT_FLAGS := -mcpu=kryo \
 OPT_FLAGS := -O3 -pipe \
 		-fopenmp -fvectorize \
 		-fslp-vectorize -freroll-loops  \
-		$(POLLY_FLAGS) $(ARM_OPT_FLAGS) \
-
+		$(POLLY_FLAGS) $(ARM_OPT_FLAGS)
+else
+#
+# GCC opt flags
+#
+KBUILD_CFLAGS += -O2 -pipe -mcpu=cortex-a53+crc+crypto
+endif
 ifeq ($(cc-name),clang)
 ifneq ($(CROSS_COMPILE),)
 CLANG_TRIPLE	?= $(CROSS_COMPILE)
