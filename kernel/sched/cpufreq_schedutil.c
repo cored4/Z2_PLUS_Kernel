@@ -199,15 +199,19 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 				  unsigned long util, unsigned long max)
 {
+	int screen_on = !state_suspended;
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
 
-	if (likely(!state_suspended))
+	if (likely(screen_on))
 		freq = (freq + (freq >> 2)) * util / max;
-	else
-		freq = freq * util / max;;
-
+	else {
+		if (policy->cpu == 0)
+			freq = freq * util / max;
+		else
+			freq = policy->min * util / max;
+	}
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;
 	sg_policy->cached_raw_freq = freq;
