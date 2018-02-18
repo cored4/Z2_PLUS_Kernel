@@ -394,8 +394,7 @@ ARM_OPT_FLAGS := -mcpu=kryo \
 		-mhvx -mhvx-double -marm \
 		-mno-fix-cortex-a53-835769 \
 
-OPT_FLAGS := -O3 -pipe \
-		-fopenmp -fvectorize \
+OPT_FLAGS := -O3 -pipe -fvectorize \
 		-fslp-vectorize -freroll-loops  \
 		$(POLLY_FLAGS) $(ARM_OPT_FLAGS)
 else
