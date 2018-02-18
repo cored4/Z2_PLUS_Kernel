@@ -106,7 +106,7 @@ SCHED_FEAT(ENERGY_AWARE, true)
  * If enabled, this can be used to inform the scheduler about capacity
  * restrictions.
  */
-SCHED_FEAT(MIN_CAPACITY_CAPPING, true)
+SCHED_FEAT(MIN_CAPACITY_CAPPING, false)
 
 #ifdef CONFIG_SCHED_TUNE
 /*
