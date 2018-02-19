@@ -391,11 +391,10 @@ POLLY_FLAGS := -mllvm -polly \
 		-mllvm -polly-vectorizer=stripmine \
 
 ARM_OPT_FLAGS := -mcpu=kryo \
-		-mhvx -mhvx-double -marm \
-		-mno-fix-cortex-a53-835769 \
+		-mhvx-double -mhvx -marm \
 
 OPT_FLAGS := -O3 -pipe -fvectorize \
-		-fslp-vectorize -freroll-loops  \
+		-fslp-vectorize -freroll-loops -funroll-loops \
 		$(POLLY_FLAGS) $(ARM_OPT_FLAGS)
 else
 #
