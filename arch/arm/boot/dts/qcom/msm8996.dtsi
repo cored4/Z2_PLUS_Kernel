@@ -21,7 +21,7 @@
 	qcom,pmic-id = <0x20009 0x2000A 0x0 0x0>;
 	interrupt-parent = <&intc>;
 	chosen {
-		bootargs = "fbcon=rotate:2, androidboot.selinux=permissive";
+		bootargs = "fbcon=rotate:2";
 	};
 	aliases {
 		sdhc1 = &sdhc_1; /* SDC1 eMMC slot */
