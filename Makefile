@@ -381,22 +381,7 @@ CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 #
 # Clang opt flags
 #
-ifeq ($(COMPILER),clang)
-POLLY_FLAGS := -mllvm -polly \
-		-mllvm -polly-run-dce \
-		-mllvm -polly-run-inliner \
-		-mllvm -polly-opt-fusion=max \
-		-mllvm -polly-ast-use-context \
-		-mllvm -polly-detect-keep-going \
-		-mllvm -polly-vectorizer=stripmine \
-
-ARM_OPT_FLAGS := -mcpu=kryo \
-		-mhvx-double -mhvx -marm \
-
-OPT_FLAGS := -O3 -pipe -fvectorize \
-		-fslp-vectorize -freroll-loops -funroll-loops \
-		$(POLLY_FLAGS) $(ARM_OPT_FLAGS)
-else
+ifneq ($(COMPILER),clang)
 #
 # GCC opt flags
 #
