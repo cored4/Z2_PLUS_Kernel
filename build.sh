@@ -30,6 +30,8 @@ export builddir="${kernel_dir}/build"
 cd $kernel_dir
 make_a_fucking_defconfig() 
 {
+	# I FUCKING HATE YOU ALL
+	rm -rf ${objdir}/arch/arm64/boot/dts/qcom/
 	make ARCH="arm64" O=$objdir $CONFIG_FILE -j8
 }
 compile() 
