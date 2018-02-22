@@ -383,21 +383,6 @@ CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
 # Clang opt flags
 #
 ifeq ($(COMPILER),clang)
-POLLY_FLAGS := -mllvm -polly \
-		-mllvm -polly-run-dce \
-		-mllvm -polly-run-inliner \
-		-mllvm -polly-opt-fusion=max \
-		-mllvm -polly-ast-use-context \
-		-mllvm -polly-detect-keep-going \
-		-mllvm -polly-vectorizer=stripmine \
-
-ARM_OPT_FLAGS := -mcpu=kryo \
-		-mhvx-double -mhvx -marm \
-
-OPT_FLAGS := -O3 -pipe -fvectorize \
-		-fslp-vectorize -freroll-loops -funroll-loops \
-		$(POLLY_FLAGS) $(ARM_OPT_FLAGS)
-else
 #
 # GCC opt flags
 #
@@ -441,7 +426,7 @@ KBUILD_CPPFLAGS := -D__KERNEL__ $(CLANG_FLAGS)
 KBUILD_CFLAGS   := -Wno-strict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
 		   -Wno-format-security \
-		   -std=gnu89 $(CLANG_FLAGS) -w
+		   -std=gnu89 $(CLANG_FLAGS)
 
 KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-835769)
 KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
@@ -661,8 +646,7 @@ endif # $(dot-config)
 all: vmlinux
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
-
-KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
+KBUILD_CFLAGS	+= $(call cc-disable-warning,pointer-sign,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-truncation)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-overflow)
