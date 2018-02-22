@@ -36,7 +36,7 @@ make_a_fucking_defconfig()
 }
 compile() 
 {
-	make CC="${CLANG_TCHAIN}" O=$objdir -j8 \
+	make -s CC="${CLANG_TCHAIN}" O=$objdir -j8 \
 	OPT_FLAGS="${OPT_FLAGS} ${ARCH_FLAGS} ${POLLY_FLAGS}" \
 	Image.gz-dtb
 }
