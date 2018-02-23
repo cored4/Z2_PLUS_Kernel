@@ -541,7 +541,7 @@ struct name_snapshot {
 	const unsigned char *name;
 	unsigned char inline_name[DNAME_INLINE_LEN];
 };
-void take_dentry_name_snapshot(struct name_snapshot *, struct dentry *);
-void release_dentry_name_snapshot(struct name_snapshot *);
+void take_dentry_name_snapshot(struct name_snapshot *name, struct dentry *dentry);
+void release_dentry_name_snapshot(struct name_snapshot *name);
 
 #endif	/* __LINUX_DCACHE_H */
