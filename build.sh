@@ -7,6 +7,8 @@ export LOCALVERSION="-R2_0.02"
 export KBUILD_BUILD_USER="ST12"
 export KBUILD_BUILD_HOST="BLR"
 export COMPILER_NAME="DTC-7.0"
+red=$(tput setaf 1) # red
+grn=$(tput setaf 2) # green
 
 export OPT_FLAGS="-O3 -pipe -fvectorize \
 				-fslp-vectorize -freroll-loops -funroll-loops"
@@ -32,7 +34,8 @@ make_a_fucking_defconfig()
 {
 	# I FUCKING HATE YOU ALL
 	rm -rf ${objdir}/arch/arm64/boot/dts/qcom/
-	make ARCH="arm64" O=$objdir $CONFIG_FILE -j8
+	echo -e ${grn} "############# Generating Defconfig ##############"
+	make -s ARCH="arm64" O=$objdir $CONFIG_FILE -j8
 }
 compile() 
 {
@@ -43,7 +46,17 @@ compile()
 ramdisk() 
 {
 	cd ${objdir}
-	mv -f arch/arm64/boot/Image.gz-dtb $builddir/Image.gz-dtb
+	COMPILED_IMAGE=arch/arm64/boot/Image.gz-dtb
+	if [[ -f ${COMPILED_IMAGE} ]]; then
+		mv -f ${COMPILED_IMAGE} $builddir/Image.gz-dtb
+		echo -e ${grn} "#################################################"
+		echo -e ${grn} "############### Build competed! #################"
+		echo -e ${grn} "#################################################"
+	else
+		echo -e ${red} "#################################################"
+		echo -e ${red} "# Build fuckedup, check warnings/errors faggot! #"
+		echo -e ${red} "#################################################"
+	fi
 }
 make_a_fucking_defconfig
 compile 
