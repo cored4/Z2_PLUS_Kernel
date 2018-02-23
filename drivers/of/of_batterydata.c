@@ -324,7 +324,9 @@ struct device_node *of_batterydata_get_best_profile(
 	int delta = 0, best_delta = 0, best_id_kohm = 0, id_range_pct,
 		batt_id_kohm = 0, i = 0, rc = 0, limit = 0;
 	bool in_range = false;
-
+#ifdef SUPPORT_LENUK_BATTERY_ID_ALGO
+	bool kohm_1, kohm_2, kohm_3;
+#endif
 	psy = power_supply_get_by_name(psy_name);
 	if (!psy) {
 		pr_err("%s supply not found. defer\n", psy_name);
@@ -372,9 +374,13 @@ struct device_node *of_batterydata_get_best_profile(
 				continue;
 			for (i = 0; i < batt_ids.num; i++) {
 #ifdef SUPPORT_LENUK_BATTERY_ID_ALGO
-				if (((batt_id_kohm >= 1) && (batt_id_kohm < 20) && (batt_ids.kohm[i] == 9))
-						||  ((batt_id_kohm >= 20) && (batt_id_kohm < 80) && (batt_ids.kohm[i] == 50))
-						||  ((batt_id_kohm >= 80) && (batt_id_kohm < 120) && (batt_ids.kohm[i] == 100))) {
+				kohm_1 = ((batt_id_kohm >= 1) && (batt_id_kohm < 20)
+						  && (batt_ids.kohm[i] == 9));
+				kohm_2 = ((batt_id_kohm >= 20) && (batt_id_kohm < 80) 
+						  && (batt_ids.kohm[i] == 50));
+				kohm_3 = ((batt_id_kohm >= 80) && (batt_id_kohm < 120) 
+						  && (batt_ids.kohm[i] == 100));
+				if (kohm_1 || kohm_2 || kohm_3) {
 					best_node = node;
 					best_id_kohm = batt_ids.kohm[i];
 					in_range = false;
@@ -440,7 +446,9 @@ int of_batterydata_read_data(struct device_node *batterydata_container_node,
 	const char *battery_type = NULL;
 	int delta, best_delta, batt_id_kohm, rpull_up_kohm,
 		vadc_vdd_uv, best_id_kohm, i, rc = 0;
-
+#ifdef SUPPORT_LENUK_BATTERY_ID_ALGO
+	bool kohm_1, kohm_2, kohm_3;
+#endif
 	node = batterydata_container_node;
 	OF_PROP_READ(rpull_up_kohm, "rpull-up-kohm", node, rc, false);
 	OF_PROP_READ(vadc_vdd_uv, "vref-batt-therm", node, rc, false);
@@ -452,7 +460,6 @@ int of_batterydata_read_data(struct device_node *batterydata_container_node,
 	best_node = NULL;
 	best_delta = 0;
 	best_id_kohm = 0;
-
 	/*
 	 * Find the battery data with a battery id resistor closest to this one
 	 */
@@ -464,9 +471,13 @@ int of_batterydata_read_data(struct device_node *batterydata_container_node,
 			continue;
 		for (i = 0; i < batt_ids.num; i++) {
 #ifdef SUPPORT_LENUK_BATTERY_ID_ALGO
-			if (((batt_id_kohm >= 1) && (batt_id_kohm < 20) && (batt_ids.kohm[i] == 9))
-					||  ((batt_id_kohm >= 20) && (batt_id_kohm < 80) && (batt_ids.kohm[i] == 50))
-					||  ((batt_id_kohm >= 80) && (batt_id_kohm < 120) && (batt_ids.kohm[i] == 100))) {
+			kohm_1 = ((batt_id_kohm >= 1) && (batt_id_kohm < 20) 
+					  && (batt_ids.kohm[i] == 9));
+			kohm_2 = ((batt_id_kohm >= 20) && (batt_id_kohm < 80) 
+					  && (batt_ids.kohm[i] == 50));
+			kohm_3 = ((batt_id_kohm >= 80) && (batt_id_kohm < 120) 
+					  && (batt_ids.kohm[i] == 100));
+			if (kohm_1 || kohm_2 || kohm_3) {
 				best_node = node;
 				best_id_kohm = batt_ids.kohm[i];
 				delta = 0;
