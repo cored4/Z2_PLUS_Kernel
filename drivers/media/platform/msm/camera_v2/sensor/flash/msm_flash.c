@@ -1094,134 +1094,54 @@ static long msm_flash_subdev_fops_ioctl(struct file *file,
 
 static struct msm_flash_ctrl_t fctrl;
 
-ssize_t proc_flash_led_write (struct file *file, const char __user *buf, size_t nbytes, loff_t *ppos)
+ssize_t proc_flash_led_write(struct file *file, const char __user *buf,
+							 size_t nbytes, loff_t *ppos)
 {
-	char string[128];
-
+	char string[16];
 	uint32_t i = 0;
-	memset(string,0x0,128);
-	if(copy_from_user(string, buf, nbytes))
+	bool turn_on;
+
+	memset(string, 0x0, 16);
+	turn_on = !strncmp(string, "on", 2);
+	if (copy_from_user(string, buf, nbytes))
 		return -EFAULT;
-	pr_err("proc_flash_led_write %d bytes ,%x,%s,\n",(int)nbytes,string[nbytes-1],string);
-	if (!strncmp((const char *)string, (const char *)"on",2))
-	{
-		CDBG("proc_flash_led_write on called\n");
-		for (i = 0; i < fctrl.torch_num_sources; i++)
-			if (fctrl.torch_trigger[i])
-				led_trigger_event(fctrl.torch_trigger[i], fctrl.torch_op_current[i]);
-		if (fctrl.switch_trigger)
-			led_trigger_event(fctrl.switch_trigger, 1);
+	if (turn_on) {
+		led_trigger_event(fctrl.switch_trigger, 1);
 		torch_status = 1;
-	}
-	else if (!strncmp((const char *)string, (const char *)"off",3))
-	{
-		CDBG("proc_flash_led_write off called\n");
-		for (i = 0; i < fctrl.flash_num_sources; i++)
-			if (fctrl.flash_trigger[i])
-				led_trigger_event(fctrl.flash_trigger[i], 0);
-		for (i = 0; i < fctrl.torch_num_sources; i++)
-			if (fctrl.torch_trigger[i])
-				led_trigger_event(fctrl.torch_trigger[i], 0);
-		if (fctrl.switch_trigger)
-			led_trigger_event(fctrl.switch_trigger, 0);
+	} else {
+		led_trigger_event(fctrl.switch_trigger, 0);
 		torch_status = 0;
 	}
-	else if (!strncmp((const char *)string, (const char *)"led1_on",7))
-	{
-		CDBG("proc_flash_led_write led1_on called\n");
-		if (fctrl.torch_trigger[0])
-			led_trigger_event(fctrl.torch_trigger[0], fctrl.torch_op_current[0]);
-		if (fctrl.switch_trigger)
-			led_trigger_event(fctrl.switch_trigger, 1);
-		torch_status = 1;
-	}
-	else if (!strncmp((const char *)string, (const char *)"led1_off",8))
-	{
-		CDBG("proc_flash_led_write led1_on called\n");
-		if (fctrl.torch_trigger[0])
-			led_trigger_event(fctrl.torch_trigger[0],0);
-		if (fctrl.switch_trigger)
-			led_trigger_event(fctrl.switch_trigger, 0);
-		torch_status = 0;
-	}
-	else if (!strncmp((const char *)string, (const char *)"led2_on",7))
-	{
-		CDBG("proc_flash_led_write led2_on called\n");
-		if (fctrl.torch_trigger[1])
-			led_trigger_event(fctrl.torch_trigger[1], fctrl.torch_op_current[1]);
-		if (fctrl.switch_trigger)
-			led_trigger_event(fctrl.switch_trigger, 1);
-		torch_status = 1;
-    }
-    else if (!strncmp((const char *)string, (const char *)"led2_off",8))
-    {
-		CDBG("proc_flash_led_write led2_off called\n");
-		if (fctrl.torch_trigger[0])
-			led_trigger_event(fctrl.torch_trigger[1],0);
-		if (fctrl.switch_trigger)
-			led_trigger_event(fctrl.switch_trigger, 0);
-		torch_status = 0;
-    }
-    else if (!strncmp((const char *)string, (const char *)"flash1_on",9))
-    {
-        CDBG("proc_flash_led_write flash1_on called\n");
-        if (fctrl.flash_trigger[0])
-            led_trigger_event(fctrl.flash_trigger[0], 800);
-        if (fctrl.switch_trigger)
-            led_trigger_event(fctrl.switch_trigger, 1);
-    }
-    else if (!strncmp((const char *)string, (const char *)"flash1_off",10))
-    {
-        CDBG("proc_flash_led_write flash1_off called\n");
-        if (fctrl.flash_trigger[0])
-            led_trigger_event(fctrl.flash_trigger[0], 0);
-        if (fctrl.switch_trigger)
-            led_trigger_event(fctrl.switch_trigger, 0);
-    }
-    else if (!strncmp((const char *)string, (const char *)"flash2_on",9))
-    {
-        CDBG("proc_flash_led_write flash2_on called\n");
-        if (fctrl.flash_trigger[1])
-            led_trigger_event(fctrl.flash_trigger[1], 800);
-        if (fctrl.switch_trigger)
-            led_trigger_event(fctrl.switch_trigger, 1);
-    }
-    else if (!strncmp((const char *)string, (const char *)"flash2_off",10))
-    {
-        CDBG("proc_flash_led_write flash2_off called\n");
-        if (fctrl.flash_trigger[1])
-            led_trigger_event(fctrl.flash_trigger[1], 0);
-        if (fctrl.switch_trigger)
-            led_trigger_event(fctrl.switch_trigger, 0);
-   }
-    else
-   {
-       CDBG("proc_flash_led_write default called\n");
-   }
+	kfree(string);
     return nbytes;
 }
-ssize_t proc_flash_led_read (struct file *file, char __user *buf, size_t nbytes, loff_t *ppos)
-{
-	char  kbuff[128];
-	memset(kbuff,0x0,128);
 
-	if(buf != NULL && nbytes > 2){
-		if(torch_status)
+ssize_t proc_flash_led_read(struct file *file, char __user *buf,
+							size_t nbytes, loff_t *ppos)
+{
+	char kbuff[16];
+	memset(kbuff, 0x0, 16);
+
+	if (buf && nbytes > 2){
+		if (torch_status)
 			strcpy(kbuff,"on\n");
 		else
 			strcpy(kbuff,"off\n");
 	}
-	if(copy_to_user(buf,kbuff,strlen(kbuff)+1))
+	if (copy_to_user(buf, kbuff, strlen(kbuff) + 1))
 		return -EFAULT;
 	else
-		return strlen(kbuff)+1;
+		return strlen (kbuff) + 1;
+	kfree(kbuff);
 }
+
 EXPORT_SYMBOL(proc_flash_led_write);
 const struct file_operations proc_flash_led_operations = {
 	.owner	= THIS_MODULE,
 	.write	= proc_flash_led_write,
 	.read	= proc_flash_led_read,
 };
+
 static int32_t msm_flash_platform_probe(struct platform_device *pdev)
 {
 	int32_t rc = 0;
@@ -1298,8 +1218,10 @@ static int32_t msm_flash_platform_probe(struct platform_device *pdev)
 
 
 	if (flash_ctrl->flash_driver_type == FLASH_DRIVER_PMIC){
-		proc_create_data("CTP_FLASH_CTRL", S_IFREG | S_IWUGO | S_IWUSR |S_IRUGO, NULL, &proc_flash_led_operations, NULL);
-		proc_create_data("CTP_TORCH_CTRL", S_IFREG | S_IWUGO | S_IWUSR |S_IRUGO, NULL, &proc_flash_led_operations, NULL);
+		proc_create_data("CTP_FLASH_CTRL", S_IFREG | S_IWUGO |
+						 S_IWUSR |S_IRUGO, NULL, &proc_flash_led_operations, NULL);
+		proc_create_data("CTP_TORCH_CTRL", S_IFREG | S_IWUGO |
+						 S_IWUSR |S_IRUGO, NULL, &proc_flash_led_operations, NULL);
 		memcpy(&fctrl,flash_ctrl,sizeof(struct msm_flash_ctrl_t));
 	}
 
