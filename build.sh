@@ -9,6 +9,7 @@ export KBUILD_BUILD_HOST="BLR"
 export COMPILER_NAME="DTC-7.0"
 red=$(tput setaf 1) # red
 grn=$(tput setaf 2) # green
+cya=$(tput setaf 6) # cyan
 
 export OPT_FLAGS="-O3 -pipe -fvectorize \
 				-fslp-vectorize -freroll-loops -funroll-loops"
@@ -35,13 +36,16 @@ make_a_fucking_defconfig()
 	# I FUCKING HATE YOU ALL
 	rm -rf ${objdir}/arch/arm64/boot/dts/qcom/
 	echo -e ${grn} "############# Generating Defconfig ##############"
+	echo -e ${cya}  "";
 	make -s ARCH="arm64" O=$objdir $CONFIG_FILE -j8
 }
 compile() 
 {
+	echo -e ${grn} "############### Compiling kernel ################"
 	make -s CC="${CLANG_TCHAIN}" O=$objdir -j8 \
 	OPT_FLAGS="${OPT_FLAGS} ${ARCH_FLAGS} ${POLLY_FLAGS}" \
 	Image.gz-dtb
+	echo -e ${cya}  "";
 }
 ramdisk() 
 {
@@ -57,6 +61,7 @@ ramdisk()
 		echo -e ${red} "# Build fuckedup, check warnings/errors faggot! #"
 		echo -e ${red} "#################################################"
 	fi
+	echo -e ${cya}  "";
 }
 make_a_fucking_defconfig
 compile 
