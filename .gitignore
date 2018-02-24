@@ -97,3 +97,9 @@ x509.genkey
 
 # Kconfig presets
 all.config
+
+# Build stuff
+/out
+/build
+clang.sh
+Build.sh
