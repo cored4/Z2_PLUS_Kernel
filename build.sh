@@ -43,7 +43,7 @@ compile()
 {
 	echo -e ${grn} "############### Compiling kernel ################"
 	echo -e ${wht}  ""
-	make CC="${CLANG_TCHAIN}" O=$objdir -j8 \
+	make -s CC="${CLANG_TCHAIN}" O=$objdir -j8 \
 	OPT_FLAGS="${OPT_FLAGS} ${ARCH_FLAGS} ${POLLY_FLAGS}" \
 	Image.gz-dtb
 }
