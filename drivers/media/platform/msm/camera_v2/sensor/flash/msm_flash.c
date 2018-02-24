@@ -1112,7 +1112,6 @@ ssize_t proc_flash_led_write(struct file *file, const char __user *buf,
 		led_trigger_event(fctrl.switch_trigger, 0);
 		torch_status = 0;
 	}
-	kfree(string);
     return nbytes;
 }
 
@@ -1132,7 +1131,6 @@ ssize_t proc_flash_led_read(struct file *file, char __user *buf,
 		return -EFAULT;
 	else
 		return strlen (kbuff) + 1;
-	kfree(kbuff);
 }
 
 EXPORT_SYMBOL(proc_flash_led_write);
