@@ -7,9 +7,9 @@ export LOCALVERSION="-ARB"
 export KBUILD_BUILD_USER="ST12"
 export KBUILD_BUILD_HOST="BLR"
 export COMPILER_NAME="DTC-7.0"
-red=$(tput setaf 1) # red
-grn=$(tput setaf 2) # green
-wht=$(tput setaf 7) # white
+NC='\033[0m'
+RED='\033[0;31m'
+LGR='\033[1;32m'
 
 export OPT_FLAGS="-O3 -pipe -fvectorize \
 				-fslp-vectorize -freroll-loops -funroll-loops"
@@ -35,15 +35,13 @@ make_a_fucking_defconfig()
 {
 	# I FUCKING HATE YOU ALL
 	rm -rf ${objdir}/arch/arm64/boot/dts/qcom/
-	echo -e ${grn} "############# Generating Defconfig ##############"
-	echo -e ${wht}  "";
+	echo -e ${LGR} "############# Generating Defconfig ##############${NC}"
 	make -s ARCH="arm64" O=$objdir $CONFIG_FILE -j8
 }
 compile() 
 {
-	echo -e ${grn} "############### Compiling kernel ################"
-	echo -e ${wht}  ""
-	make -s CC="${CLANG_TCHAIN}" O=$objdir -j8 \
+	echo -e ${LGR} "############### Compiling kernel ################${NC}"
+	make CC="${CLANG_TCHAIN}" O=$objdir -j8 \
 	OPT_FLAGS="${OPT_FLAGS} ${ARCH_FLAGS} ${POLLY_FLAGS}" \
 	Image.gz-dtb
 }
@@ -53,15 +51,14 @@ ramdisk()
 	COMPILED_IMAGE=arch/arm64/boot/Image.gz-dtb
 	if [[ -f ${COMPILED_IMAGE} ]]; then
 		mv -f ${COMPILED_IMAGE} $builddir/Image.gz-dtb
-		echo -e ${grn} "#################################################"
-		echo -e ${grn} "############### Build competed! #################"
-		echo -e ${grn} "#################################################"
+		echo -e ${LGR} "#################################################"
+		echo -e ${LGR} "############### Build competed! #################"
+		echo -e ${LGR} "#################################################${NC}"
 	else
-		echo -e ${red} "#################################################"
-		echo -e ${red} "# Build fuckedup, check warnings/errors faggot! #"
-		echo -e ${red} "#################################################"
+		echo -e ${RED} "#################################################"
+		echo -e ${RED} "# Build fuckedup, check warnings/errors faggot! #"
+		echo -e ${RED} "#################################################${NC}"
 	fi
-	echo -e ${wht}  "";
 }
 make_a_fucking_defconfig
 compile 
