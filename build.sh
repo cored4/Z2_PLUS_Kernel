@@ -6,7 +6,6 @@ export SUBARCH=arm64
 export LOCALVERSION="-ARB"
 export KBUILD_BUILD_USER="ST12"
 export KBUILD_BUILD_HOST="BLR"
-export COMPILER_NAME="DTC-7.0"
 NC='\033[0m'
 RED='\033[0;31m'
 LGR='\033[1;32m'
