@@ -28,11 +28,7 @@ export WIPPER_POLLY=" \
 				-mllvm -polly-delinearize \
 				-mllvm -polly-optimizer=isl \
 				-mllvm -enable-polly-aligned \
-				-mllvm -polly-allow-nonaffine \
-				-mllvm -polly-opt-optimize-only \
-				-mllvm -polly-code-generation=full \
-				-mllvm -polly-use-runtime-alias-checks \
-				-mllvm -polly-allow-differing-element-types"
+				-mllvm -polly-allow-nonaffine"
 
 export CLANG_TRIPLE="aarch64-linux-gnu-"
 export CROSS_COMPILE="${HOME}/build/z2/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-"
