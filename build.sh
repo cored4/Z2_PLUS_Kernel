@@ -21,8 +21,18 @@ export POLLY_FLAGS="-mllvm -polly \
 				-mllvm -polly-run-inliner \
 				-mllvm -polly-opt-fusion=max \
 				-mllvm -polly-ast-use-context \
-				-mllvm -polly-detect-keep-going \
 				-mllvm -polly-vectorizer=stripmine"
+
+export WIPPER_POLLY=" \
+				-mllvm -polly-parallel \
+				-mllvm -polly-delinearize \
+				-mllvm -polly-optimizer=isl \
+				-mllvm -enable-polly-aligned \
+				-mllvm -polly-allow-nonaffine \
+				-mllvm -polly-opt-optimize-only \
+				-mllvm -polly-code-generation=full \
+				-mllvm -polly-use-runtime-alias-checks \
+				-mllvm -polly-allow-differing-element-types"
 
 export CLANG_TRIPLE="aarch64-linux-gnu-"
 export CROSS_COMPILE="${HOME}/build/z2/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-"
@@ -41,7 +51,7 @@ compile()
 {
 	echo -e ${LGR} "############### Compiling kernel ################${NC}"
 	make CC="${CLANG_TCHAIN}" O=$objdir -j8 \
-	OPT_FLAGS="${OPT_FLAGS} ${ARCH_FLAGS} ${POLLY_FLAGS}" \
+	OPT_FLAGS="${OPT_FLAGS} ${ARCH_FLAGS} ${POLLY_FLAGS} ${WIPPER_POLLY}" \
 	Image.gz-dtb
 }
 ramdisk() 
