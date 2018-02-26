@@ -10,11 +10,9 @@ NC='\033[0m'
 RED='\033[0;31m'
 LGR='\033[1;32m'
 
-export OPT_FLAGS="-O3 -pipe -fvectorize \
-				-fslp-vectorize -freroll-loops -funroll-loops"
+export OPT_FLAGS="-O3 -pipe -fvectorize -fslp-vectorize"
 
-export ARCH_FLAGS="-mtune=cortex-a53+fp+simd -marm \
-				-mhvx-double -mhvx -marm"
+export ARCH_FLAGS="-mtune=cortex-a53 -mcpu=kryo -marm"
 
 export POLLY_FLAGS="-mllvm -polly \
 				-mllvm -polly-run-dce \
