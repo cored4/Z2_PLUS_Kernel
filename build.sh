@@ -13,7 +13,7 @@ LGR='\033[1;32m'
 export OPT_FLAGS="-O3 -pipe -fvectorize \
 				-fslp-vectorize -freroll-loops -funroll-loops"
 
-export ARCH_FLAGS="-mtune=kryo+fp+simd \
+export ARCH_FLAGS="-mtune=cortex-a53+fp+simd -marm \
 				-mhvx-double -mhvx -marm"
 
 export POLLY_FLAGS="-mllvm -polly \
