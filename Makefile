@@ -379,6 +379,22 @@ AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
 
+GEN_FLAGS := -O3 -pipe -fvectorize -fslp-vectorize
+
+ARCH_FLAGS := -mtune=kryo
+
+POLLY_FLAGS := -mllvm -polly \
+				-mllvm -polly-run-dce \
+				-mllvm -polly-run-inliner \
+				-mllvm -polly-opt-fusion=max \
+				-mllvm -polly-ast-use-context \
+				-mllvm -polly-vectorizer=stripmine
+
+WIPPER_POLLY := -mllvm -polly-parallel \
+				-mllvm -polly-delinearize \
+				-mllvm -polly-optimizer=isl
+
+OPT_FLAGS := $(GEN_FLAGS) $(POLLY_FLAGS) $(WIPPER_POLLY) $(ARCH_FLAGS)
 ifeq ($(cc-name),clang)
 ifneq ($(CROSS_COMPILE),)
 CLANG_TRIPLE	?= $(CROSS_COMPILE)
