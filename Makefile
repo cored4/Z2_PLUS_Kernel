@@ -379,16 +379,6 @@ AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
 
-#
-# Clang opt flags
-#
-ifeq ($(COMPILER),clang)
-#
-# GCC opt flags
-#
-KBUILD_CFLAGS += -O2 -pipe -mcpu=cortex-a53+crc+crypto
-endif
-
 ifeq ($(cc-name),clang)
 ifneq ($(CROSS_COMPILE),)
 CLANG_TRIPLE	?= $(CROSS_COMPILE)
