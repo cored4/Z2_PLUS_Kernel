@@ -554,18 +554,19 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
         if (ws) {
                 wslen = strlen(ws->name);
 
-                if ((!enable_ipa_ws && !strncmp(ws->name, "IPA_WS", wslen)) ||
-                        (!enable_wlan_extscan_wl_ws &&
-                                !strncmp(ws->name, "wlan_extscan_wl", wslen)) ||
-                        (!enable_qcom_rx_wakelock_ws &&
-                                !strncmp(ws->name, "qcom_rx_wakelock", wslen)) ||
-                        (!enable_wlan_wow_wl_ws &&
+		if ((!enable_ipa_ws &&
+			 	!strncmp(ws->name, "IPA_WS", wslen)) ||
+			(!enable_wlan_extscan_wl_ws &&
+				!strncmp(ws->name, "wlan_extscan_wl", wslen)) ||
+			(!enable_qcom_rx_wakelock_ws &&
+				!strncmp(ws->name, "qcom_rx_wakelock", wslen)) ||
+			(!enable_wlan_wow_wl_ws &&
 				!strncmp(ws->name, "wlan_wow_wl", wslen)) ||
-                        (!enable_wlan_ws &&
-                                !strncmp(ws->name, "wlan", wslen)) ||
-                        (!enable_timerfd_ws &&
-                                !strncmp(ws->name, "[timerfd]", wslen)) ||
-                        (!enable_netmgr_wl_ws &&
+			(!enable_wlan_ws &&
+				!strncmp(ws->name, "wlan", wslen)) ||
+			(!enable_timerfd_ws &&
+				!strncmp(ws->name, "[timerfd]", wslen)) ||
+			(!enable_netmgr_wl_ws &&
 				!strncmp(ws->name, "netmgr_wl", wslen)) ||
 			(!enable_wlan_ipa_ws &&
 				!strncmp(ws->name, "wlan_ipa", wslen)) ||
@@ -574,34 +575,31 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 			(!enable_wcnss_filter_lock_ws &&
 				!strncmp(ws->name, "wcnss_filter_lock", wslen)) ||
 			(!enable_si_ws &&
-				!strncmp(ws->name, "sensor_ind", 10)) ||
+				!strncmp(ws->name, "sensor_ind", wslen)) ||
 			(!enable_msm_hsic_ws &&
-				!strncmp(ws->name, "msm_hsic_host", 13)) ||
+				!strncmp(ws->name, "msm_hsic_host", wslen)) ||
 			(!enable_wlan_rx_wake_ws &&
-				!strncmp(ws->name, "wlan_rx_wake", 12)) ||
+				!strncmp(ws->name, "wlan_rx_wake", wslen)) ||
 			(!enable_wlan_ctrl_wake_ws &&
-				!strncmp(ws->name, "wlan_ctrl_wake", 14)) ||
+				!strncmp(ws->name, "wlan_ctrl_wake", wslen)) ||
 			(!enable_wlan_wake_ws &&
-				!strncmp(ws->name, "wlan_wake", 9)) ||
+				!strncmp(ws->name, "wlan_wake", wslen)) ||
 			(!enable_bluedroid_timer_ws &&
-				!strncmp(ws->name, "bluedroid_timer", 15)) ||
-           	 	(!enable_bluetooth_timer_ws &&
+				!strncmp(ws->name, "bluedroid_timer", wslen)) ||
+			(!enable_bluetooth_timer_ws &&
 				!strncmp(ws->name, "bluetooth_timer", wslen)) ||
 			(!enable_alarmtimer_ws &&
 				!strncmp(ws->name, "alarmtimer", wslen)) ||
-                        (!enable_netlink_ws &&
-                                !strncmp(ws->name, "NETLINK", wslen))) {
-
-                        if (ws->active) {
-                                wakeup_source_deactivate(ws);
-                                pr_info("forcefully deactivate wakeup source: %s\n",
-                                        ws->name);
-                        }
-
-                        return true;
+			(!enable_netlink_ws &&
+				!strncmp(ws->name, "NETLINK", wslen))) {
+				if (ws->active) {
+					wakeup_source_deactivate(ws);
+					pr_info("forcefully deactivate wakeup source: %s\n",
+						ws->name);
+					}
+				return true;
                 }
         }
-
 	return false;
 }
 
