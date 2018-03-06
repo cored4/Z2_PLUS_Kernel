@@ -144,13 +144,11 @@ static ssize_t set_wakeup_status(struct device *device,
 
 	retval = kstrtou64(buffer, 0, &val);
 	pr_info("val === %d\n", (int)val);
-	if (val == 1) {
-		enable_irq_wake(fpc1020->irq);
+	if (val == 1)
 		fpc1020->wakeup_status = 1;
-	} else if (val == 0) {
-		disable_irq_wake(fpc1020->irq);
+	else if (val == 0)
 		fpc1020->wakeup_status = 0;
-	} else
+	else
 		return -ENOENT;
 
 	return strnlen(buffer, count);
@@ -491,7 +489,8 @@ static int fpc1020_probe(struct platform_device *pdev)
 
 	/* Disable IRQ */
 	disable_irq(fpc1020->irq);
-
+	/* Enable irq wake */
+	enable_irq_wake(fpc1020->irq);
 	return 0;
 
 error_unregister_client:
