@@ -295,12 +295,11 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	struct fpc1020_data *fpc1020 = _fpc1020;
 
 	pr_info("fpc1020 IRQ interrupt\n");
-	smp_rmb();
+	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	if (fpc1020->screen_on == 0) {
 		state_boost();
 		wake_lock_timeout(&fpc1020->wake_lock, 300);
 	}
-	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	return IRQ_HANDLED;
 }
 
