@@ -1,6 +1,6 @@
 VERSION = 3
 PATCHLEVEL = 18
-SUBLEVEL = 97
+SUBLEVEL = 98
 EXTRAVERSION =
 NAME = Diseased Newt
 
@@ -381,7 +381,7 @@ CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
 
 GEN_FLAGS := -O3 -pipe -fvectorize -fslp-vectorize
 
-ARCH_FLAGS := -mtune=kryo
+ARCH_FLAGS := -mtune=kryo+fp+crypto
 
 POLLY_FLAGS := -mllvm -polly \
 				-mllvm -polly-run-dce \
@@ -391,7 +391,6 @@ POLLY_FLAGS := -mllvm -polly \
 				-mllvm -polly-vectorizer=stripmine
 
 WIPPER_POLLY := -mllvm -polly-parallel \
-				-mllvm -polly-delinearize \
 				-mllvm -polly-optimizer=isl
 
 OPT_FLAGS := $(GEN_FLAGS) $(POLLY_FLAGS) $(WIPPER_POLLY) $(ARCH_FLAGS)
