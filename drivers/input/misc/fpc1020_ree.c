@@ -29,6 +29,7 @@
 #include <linux/io.h>
 #include <linux/of_gpio.h>
 #include <linux/input.h>
+#include <linux/state_notifier.h>
 
 #define FPC1020_TOUCH_DEV_NAME  "fpc1020tp"
 
@@ -295,7 +296,10 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 
 	pr_info("fpc1020 IRQ interrupt\n");
 	smp_rmb();
-	wake_lock_timeout(&fpc1020->wake_lock, 300);
+	if (fpc1020->screen_on == 0) {
+		state_boost();
+		wake_lock_timeout(&fpc1020->wake_lock, 300);
+	}
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	return IRQ_HANDLED;
 }
