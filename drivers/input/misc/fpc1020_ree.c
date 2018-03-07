@@ -54,8 +54,8 @@ struct fpc1020_data {
 	u8  report_key;
 	struct wake_lock wake_lock;
 	struct wake_lock fp_wl;
-	int wakeup_status;
-	int screen_on;
+	int __read_mostly wakeup_status;
+	int __read_mostly screen_on;
 };
 
 /* From drivers/input/keyboard/gpio_keys.c */
@@ -144,13 +144,11 @@ static ssize_t set_wakeup_status(struct device *device,
 
 	retval = kstrtou64(buffer, 0, &val);
 	pr_info("val === %d\n", (int)val);
-	if (val == 1) {
-		enable_irq_wake(fpc1020->irq);
+	if (val == 1)
 		fpc1020->wakeup_status = 1;
-	} else if (val == 0) {
-		disable_irq_wake(fpc1020->irq);
+	else if (val == 0)
 		fpc1020->wakeup_status = 0;
-	} else
+	else
 		return -ENOENT;
 
 	return strnlen(buffer, count);
@@ -388,6 +386,21 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 	return retval;
 }
 
+static void set_fingerprintd_nice(int nice)
+{
+	struct task_struct *p;
+
+	read_lock(&tasklist_lock);
+	for_each_process(p) {
+		if (!memcmp(p->comm, "fingerprint@2.1", 16)) {
+			pr_err("fingerprint nice changed to %i\n", nice);
+			set_user_nice(p, nice);
+			break;
+		}
+	}
+	read_unlock(&tasklist_lock);
+}
+
 static int fb_notifier_callback(struct notifier_block *self,
 		unsigned long event, void *data)
 {
@@ -401,9 +414,11 @@ static int fb_notifier_callback(struct notifier_block *self,
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_err("ScreenOn\n");
 			fpc1020->screen_on = 1;
+			set_fingerprintd_nice(0);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_err("ScreenOff\n");
 			fpc1020->screen_on = 0;
+			set_fingerprintd_nice(MIN_NICE);
 		}
 	}
 	return 0;
@@ -474,7 +489,8 @@ static int fpc1020_probe(struct platform_device *pdev)
 
 	/* Disable IRQ */
 	disable_irq(fpc1020->irq);
-
+	/* Enable irq wake */
+	enable_irq_wake(fpc1020->irq);
 	return 0;
 
 error_unregister_client:

@@ -380,9 +380,6 @@ CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
 
 GEN_FLAGS := -O3 -pipe -fvectorize -fslp-vectorize
-
-ARCH_FLAGS := -mtune=kryo+fp+crypto
-
 POLLY_FLAGS := -mllvm -polly \
 				-mllvm -polly-run-dce \
 				-mllvm -polly-run-inliner \
@@ -393,7 +390,11 @@ POLLY_FLAGS := -mllvm -polly \
 WIPPER_POLLY := -mllvm -polly-parallel \
 				-mllvm -polly-optimizer=isl
 
-OPT_FLAGS := $(GEN_FLAGS) $(POLLY_FLAGS) $(WIPPER_POLLY) $(ARCH_FLAGS)
+KBUILD_CFLAGS	+= $(call cc-option,-march=armv8-a+crypto+crc,) \
+				$(call cc-option,-mtune=kryo+fp+crypto)
+
+OPT_FLAGS := $(GEN_FLAGS) $(POLLY_FLAGS) $(WIPPER_POLLY)
+
 ifeq ($(cc-name),clang)
 ifneq ($(CROSS_COMPILE),)
 CLANG_TRIPLE	?= $(CROSS_COMPILE)
