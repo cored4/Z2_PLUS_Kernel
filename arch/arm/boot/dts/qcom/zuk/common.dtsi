@@ -15,13 +15,16 @@
 	aliases {
 		i2c1 = &i2c_1;
 		i2c9 = &i2c_9;
-		/delete-property/ i2c12;
 		/delete-property/ spi12;
 	};
 };
 
 &soc {
-	/delete-node/ spi@75BA000;
+	/delete-property/ apc0_pwrcl_mem_acc_corner;
+	/delete-property/ apc1_perfcl_mem_acc_corner;
+	/delete-property/ apcc_l3_mem_acc_corner;
+	/delete-property/ gfx_mem_acc_corner;
+	/delete-node/ spi@75ba000;
 
 	i2c_1: i2c@7575000 {/* BLSP1 QUP1 */
 		compatible = "qcom,i2c-msm-v2";
@@ -359,6 +362,10 @@
 
 &i2c_8 {
 	/delete-node/ nq@28;
+};
+
+&i2c_12 {
+	status = "disabled";
 };
 
 &firmware {
