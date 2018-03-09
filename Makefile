@@ -377,13 +377,13 @@ AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
 
-GEN_FLAGS := -O3 -pipe -fvectorize -fslp-vectorize
+GEN_FLAGS := -O3 -fvectorize -fslp-vectorize -fopenmp
 
 POLLY_FLAGS := -mllvm -polly \
 				-mllvm -polly-run-dce \
-				-mllvm -polly-parallel \
 				-mllvm -polly-run-inliner \
 				-mllvm -polly-opt-fusion=max \
+				-mllvm -polly-parallel -lgomp \
 				-mllvm -polly-ast-use-context \
 				-mllvm -polly-vectorizer=stripmine
 
