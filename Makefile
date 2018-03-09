@@ -377,7 +377,7 @@ AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
 
-GEN_FLAGS := -O3 -fvectorize -fslp-vectorize -fopenmp
+GEN_FLAGS := -O3 -fopenmp
 
 POLLY_FLAGS := -mllvm -polly \
 				-mllvm -polly-run-dce \
@@ -388,7 +388,7 @@ POLLY_FLAGS := -mllvm -polly \
 				-mllvm -polly-vectorizer=stripmine
 
 KBUILD_CFLAGS	+= $(call cc-option,-march=armv8-a+crypto+crc,) \
-				$(call cc-option,-mtune=kryo+fp+crypto)
+				$(call cc-option,-mcpu=kryo)
 
 OPT_FLAGS := $(GEN_FLAGS) $(POLLY_FLAGS)
 
