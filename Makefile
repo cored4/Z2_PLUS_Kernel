@@ -214,8 +214,6 @@ VPATH		:= $(srctree)$(if $(KBUILD_EXTMOD),:$(KBUILD_EXTMOD))
 
 export srctree objtree VPATH
 
-CCACHE := $(shell which ccache)
-
 # SUBARCH tells the usermode build what the underlying arch is.  That is set
 # first, and if a usermode build is happening, the "ARCH=um" on the command
 # line overrides the setting of ARCH below.  If a native build is happening,
@@ -354,7 +352,7 @@ include $(srctree)/scripts/Kbuild.include
 # Make variables (CC, etc...)
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
-CC		= $(CCACHE) $(CROSS_COMPILE)gcc
+CC		= $(CROSS_COMPILE)gcc
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -379,21 +377,20 @@ AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
 
-GEN_FLAGS := -O3 -pipe -fvectorize -fslp-vectorize
+GEN_FLAGS := -O3 -fopenmp
+
 POLLY_FLAGS := -mllvm -polly \
 				-mllvm -polly-run-dce \
 				-mllvm -polly-run-inliner \
 				-mllvm -polly-opt-fusion=max \
+				-mllvm -polly-parallel -lgomp \
 				-mllvm -polly-ast-use-context \
 				-mllvm -polly-vectorizer=stripmine
 
-WIPPER_POLLY := -mllvm -polly-parallel \
-				-mllvm -polly-optimizer=isl
-
 KBUILD_CFLAGS	+= $(call cc-option,-march=armv8-a+crypto+crc,) \
-				$(call cc-option,-mtune=kryo+fp+crypto)
+				$(call cc-option,-mcpu=kryo)
 
-OPT_FLAGS := $(GEN_FLAGS) $(POLLY_FLAGS) $(WIPPER_POLLY)
+OPT_FLAGS := $(GEN_FLAGS) $(POLLY_FLAGS)
 
 ifeq ($(cc-name),clang)
 ifneq ($(CROSS_COMPILE),)
