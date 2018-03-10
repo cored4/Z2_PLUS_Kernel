@@ -377,7 +377,7 @@ AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
 
-GEN_FLAGS := -O3 -fopenmp
+GEN_FLAGS := -O3 -fopenmp -funroll-loops
 
 POLLY_FLAGS := -mllvm -polly \
 				-mllvm -polly-run-dce \
