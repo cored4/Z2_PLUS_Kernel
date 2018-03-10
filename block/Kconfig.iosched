@@ -15,7 +15,7 @@ config IOSCHED_NOOP
 config IOSCHED_TEST
 	tristate "Test I/O scheduler"
 	depends on DEBUG_FS
-	default m
+	default n
 	---help---
 	  The test I/O scheduler is a duplicate of the noop scheduler with
 	  addition of test utlity.
@@ -25,7 +25,7 @@ config IOSCHED_TEST
 
 config IOSCHED_DEADLINE
 	tristate "Deadline I/O scheduler"
-	default y
+	default n
 	---help---
 	  The deadline I/O scheduler is simple and compact. It will provide
 	  CSCAN service with FIFO expiration of requests, switching to
@@ -60,6 +60,7 @@ config IOSCHED_FIOPS
           
 config IOSCHED_SWITCHER
 	bool "Use Noop while the screen is off"
+	default n
 	depends on IOSCHED_NOOP
 	---help---
 	  This enables a driver that switches the I/O scheduler for a single
