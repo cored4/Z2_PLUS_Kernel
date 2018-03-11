@@ -181,6 +181,13 @@ config ADRENO_IDLER
 	  wasted power coming from stock Adreno TZ while
 	  maintaining high-performance.
 
+config ADRENO_BOOST
+	tristate "Adrenoboost"
+	depends on DEVFREQ_GOV_MSM_ADRENO_TZ
+	help
+	  Algorithm that slows down Adreno TZ down scaling.
+	  Boosts 3D performance.
+
 comment "DEVFREQ Drivers"
 
 config ARM_EXYNOS4_BUS_DEVFREQ
