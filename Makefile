@@ -1,6 +1,6 @@
 VERSION = 3
 PATCHLEVEL = 18
-SUBLEVEL = 98
+SUBLEVEL = 99
 EXTRAVERSION =
 NAME = Diseased Newt
 
@@ -377,7 +377,8 @@ AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
 
-GEN_FLAGS := -O3 -fopenmp
+GEN_FLAGS := -O3 -fopenmp -funroll-loops \
+				-mtune=kryo
 
 POLLY_FLAGS := -mllvm -polly \
 				-mllvm -polly-run-dce \
@@ -386,9 +387,6 @@ POLLY_FLAGS := -mllvm -polly \
 				-mllvm -polly-parallel -lgomp \
 				-mllvm -polly-ast-use-context \
 				-mllvm -polly-vectorizer=stripmine
-
-KBUILD_CFLAGS	+= $(call cc-option,-march=armv8-a+crypto+crc,) \
-				$(call cc-option,-mcpu=kryo)
 
 OPT_FLAGS := $(GEN_FLAGS) $(POLLY_FLAGS)
 
@@ -431,6 +429,7 @@ KBUILD_CFLAGS   := -Wno-strict-prototypes -Wno-trigraphs \
 		   -Wno-format-security \
 		   -std=gnu89 $(CLANG_FLAGS)
 
+ifneq ($(cc-name),clang)
 KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-835769)
 KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
 LDFLAGS_vmlinux	+= $(call ld-option, --no-fix-cortex-a53-835769)
@@ -439,6 +438,8 @@ LDFLAGS_MODULE	+= $(call ld-option, --no-fix-cortex-a53-835769)
 LDFLAGS_MODULE	+= $(call ld-option, --no-fix-cortex-a53-843419)
 LDFLAGS		+= $(call ld-option, --no-fix-cortex-a53-835769)
 LDFLAGS		+= $(call ld-option, --no-fix-cortex-a53-843419)
+endif
+
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__ $(CLANG_FLAGS)

@@ -909,26 +909,6 @@ exit_work_func:
 
 /*******************************************************
 Function:
-	Timer interrupt service routine for polling mode.
-Input:
-	timer: timer struct pointer
-Output:
-	Timer work mode. 
-		HRTIMER_NORESTART: no restart mode
-*********************************************************/
-static enum hrtimer_restart goodix_ts_timer_handler(struct hrtimer *timer)
-{
-	struct goodix_ts_data *ts = container_of(timer, struct goodix_ts_data, timer);
-
-	GTP_DEBUG_FUNC();
-
-	queue_work(goodix_wq, &ts->work);
-	hrtimer_start(&ts->timer, ktime_set(0, (GTP_POLL_TIME+6)*1000000), HRTIMER_MODE_REL);
-	return HRTIMER_NORESTART;
-}
-
-/*******************************************************
-Function:
 	External interrupt service routine for interrupt mode.
 Input:
 	irq:  interrupt number.
@@ -1544,7 +1524,7 @@ Output:
 *******************************************************/
 static s8 gtp_request_irq(struct goodix_ts_data *ts)
 {
-	s32 ret = -1;
+	int ret = 0;
 	const u8 irq_table[] = GTP_IRQ_TAB;
 
 	GTP_DEBUG_FUNC();
@@ -1557,22 +1537,17 @@ static s8 gtp_request_irq(struct goodix_ts_data *ts)
 					ts);
 	if (ret)
 	{
-		GTP_ERROR("Request IRQ failed!ERRNO:%d.", ret);
-		GTP_GPIO_AS_INPUT(gtp_int_gpio);
-		GTP_GPIO_FREE(gtp_int_gpio);
-
-		hrtimer_init(&ts->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-		ts->timer.function = goodix_ts_timer_handler;
-		hrtimer_start(&ts->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
-		return -1;
+		ts->use_irq = 1;
+		ret = -1;
+		return ret;
 	}
 	else 
 	{
-	ts->irq_is_free = 0;
-	ts->irq_is_disable = 0;
+		ts->irq_is_free = 0;
+		ts->irq_is_disable = 0;
 		gtp_irq_disable(ts);
 		ts->use_irq = 1;
-		return 0;
+		return ret;
 	}
 }
 
@@ -2504,7 +2479,7 @@ static int __init goodix_ts_init(void)
 
 	GTP_DEBUG_FUNC();   
 	GTP_INFO("GTP driver installing...");
-	goodix_wq = create_singlethread_workqueue("goodix_wq");
+	goodix_wq = alloc_workqueue("goodix_wq", WQ_HIGHPRI, 1);
 	if (!goodix_wq)
 	{
 		GTP_ERROR("Creat workqueue failed.");
