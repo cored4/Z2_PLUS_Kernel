@@ -53,8 +53,6 @@ struct fpc1020_data {
 	struct workqueue_struct *fpc1020_wq;
 	u8  report_key;
 	struct wake_lock wake_lock;
-	struct wake_lock fp_wl;
-	int __read_mostly wakeup_status;
 	int __read_mostly screen_on;
 };
 
@@ -96,66 +94,6 @@ static ssize_t irq_set(struct device *device,
 }
 
 static DEVICE_ATTR(irq, S_IRUSR | S_IWUSR, irq_get, irq_set);
-
-static ssize_t fp_wl_get(struct device *device,
-		struct device_attribute *attribute,
-		char *buffer)
-{
-	/* struct fpc1020_data* fpc1020 = dev_get_drvdata(device); */
-	return 0;
-}
-
-static ssize_t fp_wl_set(struct device *device,
-		struct device_attribute *attribute,
-		const char *buffer, size_t count)
-{
-	int retval = 0;
-	u64 val;
-	struct fpc1020_data *fpc1020 = dev_get_drvdata(device);
-
-	retval = kstrtou64(buffer, 0, &val);
-	if (val == 1 && !wake_lock_active(&fpc1020->fp_wl))
-		wake_lock(&fpc1020->fp_wl);
-	else if (val == 0 && wake_lock_active(&fpc1020->fp_wl))
-		wake_unlock(&fpc1020->fp_wl);
-	else
-		pr_err("HAL wakelock request fail, val = %d\n", (int)val);
-	return strnlen(buffer, count);
-}
-
-static DEVICE_ATTR(wl, S_IRUSR | S_IWUSR, fp_wl_get, fp_wl_set);
-
-static ssize_t get_wakeup_status(struct device *device,
-		struct device_attribute *attribute,
-		char *buffer)
-{
-	struct fpc1020_data *fpc1020 = dev_get_drvdata(device);
-
-	return scnprintf(buffer, PAGE_SIZE, "%i\n", fpc1020->wakeup_status);
-}
-
-static ssize_t set_wakeup_status(struct device *device,
-		struct device_attribute *attribute,
-		const char *buffer, size_t count)
-{
-	int retval = 0;
-	u64 val;
-	struct fpc1020_data *fpc1020 = dev_get_drvdata(device);
-
-	retval = kstrtou64(buffer, 0, &val);
-	pr_info("val === %d\n", (int)val);
-	if (val == 1)
-		fpc1020->wakeup_status = 1;
-	else if (val == 0)
-		fpc1020->wakeup_status = 0;
-	else
-		return -ENOENT;
-
-	return strnlen(buffer, count);
-}
-
-static DEVICE_ATTR(wakeup, S_IRUSR | S_IWUSR,
-		get_wakeup_status, set_wakeup_status);
 
 static ssize_t get_key(struct device *device,
 		struct device_attribute *attribute, char *buffer)
@@ -200,27 +138,9 @@ static ssize_t set_key(struct device *device,
 
 static DEVICE_ATTR(key, S_IRUSR | S_IWUSR, get_key, set_key);
 
-static ssize_t get_screen_stat(struct device* device, struct device_attribute* attribute, char* buffer)
-{
-	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
-	return scnprintf(buffer, PAGE_SIZE, "%i\n", fpc1020->screen_on);
-}
-
-static ssize_t set_screen_stat(struct device* device,
-		struct device_attribute* attribute,
-		const char*buffer, size_t count)
-{
-	return 1;
-}
-
-static DEVICE_ATTR(screen, S_IRUSR | S_IWUSR, get_screen_stat, set_screen_stat);
-
 static struct attribute *attributes[] = {
 	&dev_attr_irq.attr,
-	&dev_attr_wakeup.attr,
 	&dev_attr_key.attr,
-	&dev_attr_wl.attr,
-	&dev_attr_screen.attr,
 	NULL
 };
 
@@ -479,7 +399,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 	}
 
 	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
-	wake_lock_init(&fpc1020->fp_wl, WAKE_LOCK_SUSPEND, "fp_hal_wl");
 
 	retval = fpc1020_initial_irq(fpc1020);
 	if (retval != 0) {
