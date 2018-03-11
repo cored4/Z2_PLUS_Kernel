@@ -430,18 +430,6 @@ error:
 	return retval;
 }
 
-static int fpc1020_resume(struct platform_device *pdev)
-{
-	int retval = 0;
-	return retval;
-}
-
-static int fpc1020_suspend(struct platform_device *pdev, pm_message_t state)
-{
-	int retval = 0;
-	return retval;
-}
-
 static int fpc1020_remove(struct platform_device *pdev)
 {
 	int retval = 0;
@@ -458,8 +446,6 @@ static struct of_device_id fpc1020_match[] = {
 static struct platform_driver fpc1020_plat_driver = {
 	.probe = fpc1020_probe,
 	.remove = fpc1020_remove,
-	.suspend = fpc1020_suspend,
-	.resume = fpc1020_resume,
 	.driver = {
 		.name = "fpc1020",
 		.owner = THIS_MODULE,
