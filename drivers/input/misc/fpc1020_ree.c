@@ -52,7 +52,6 @@ struct fpc1020_data {
 	struct work_struct input_report_work;
 	struct workqueue_struct *fpc1020_wq;
 	u8  report_key;
-	struct wake_lock wake_lock;
 	int __read_mostly screen_on;
 };
 
@@ -216,7 +215,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	smp_rmb();
 	if (fpc1020->screen_on == 0) {
 		state_boost();
-		wake_lock_timeout(&fpc1020->wake_lock, 300);
+		pm_wakeup_event(fpc1020->dev, 5000);
 	}
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	return IRQ_HANDLED;
@@ -398,7 +397,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_destroy_workqueue;
 	}
 
-	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
+	device_init_wakeup(dev, true);
 
 	retval = fpc1020_initial_irq(fpc1020);
 	if (retval != 0) {
