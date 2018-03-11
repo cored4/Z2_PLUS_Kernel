@@ -618,7 +618,16 @@ config FORCE_FAST_CHARGE
 	default n
 	help
 	  This allows users to override default charge rate for USB
-	  
+
+config LE_RKM
+	bool "This is the lenovo replay kernel message implement"
+	depends on MACH_ZUK
+	default n
+	help
+	  By RKM,the offline log in andorid can backup previous system logs,
+	  such as kernel dmesg log, tz logs; it also can access current
+	  system lifetime's boot logs,such as sbl logs, lk logs, even tz logs.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
