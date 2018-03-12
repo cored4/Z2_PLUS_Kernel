@@ -2238,6 +2238,7 @@ static int i2c_msm_pm_xfer_start(struct i2c_msm_ctrl *ctrl)
 	int ret;
 	mutex_lock(&ctrl->xfer.mtx);
 
+	i2c_msm_pm_pinctrl_state(ctrl, true);
 	pm_runtime_get_sync(ctrl->dev);
 	/*
 	 * if runtime PM callback was not invoked (when both runtime-pm
