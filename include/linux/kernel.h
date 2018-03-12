@@ -592,7 +592,7 @@ do {									\
  * let gcc optimize the rest.
  */
 
-#ifdef CONFIG_DISABLE_TRACE_PRINTK
+#if 1
 #define trace_printk pr_debug
 #else
 #define trace_printk(fmt, ...)				\
