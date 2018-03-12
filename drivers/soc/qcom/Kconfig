@@ -902,7 +902,12 @@ config WCD_DSP_GLINK
 	   provides read and write interface via char device.
 
 config STATE_NOTIFIER
-        bool "State Notifier"
+	bool "State Notifier"
+	default n
+
+config ZUK_SHENQI
+	bool "Service by ZUK for reading verious HW codes"
+	depends on MACH_ZUK
 	default n
 
 source "drivers/soc/qcom/memshare/Kconfig"
