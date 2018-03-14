@@ -15,7 +15,7 @@
 	aliases {
 		i2c1 = &i2c_1;
 		i2c9 = &i2c_9;
-};
+	};
 };
 
 &soc {
@@ -362,11 +362,11 @@
 &i2c_8 {
 	/delete-node/ nq@28;
 };
+
 &i2c_12 {
 	status = "disabled";
 };
 
 &spi_12 {
- status = "disabled";
+	status = "disabled";
 };
-

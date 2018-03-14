@@ -21,24 +21,28 @@
  * tunables
  */
 /* max queue in one round of service */
-static const int cfq_quantum = 4;
+static const int cfq_quantum = 8;
 static const u64 cfq_fifo_expire[2] = { NSEC_PER_SEC / 4, NSEC_PER_SEC / 8 };
 /* maximum backwards seek, in KiB */
 static const int cfq_back_max = 16 * 1024;
 /* penalty of a backwards seek */
-static const int cfq_back_penalty = 1;
-static const u64 cfq_slice_sync = NSEC_PER_SEC / 8;
+static const int cfq_back_penalty = 2;
+static const u64 cfq_slice_sync = NSEC_PER_SEC / 10;
 static u64 cfq_slice_async = NSEC_PER_SEC / 25;
 static const int cfq_slice_async_rq = 2;
-static int cfq_slice_idle = 0;
-static u64 cfq_group_idle = 0;
+static u64 cfq_slice_idle = NSEC_PER_SEC / 125;
+static u64 cfq_group_idle = NSEC_PER_SEC / 125;
 static const u64 cfq_target_latency = (u64)NSEC_PER_SEC * 3/10; /* 300 ms */
 static const int cfq_hist_divisor = 4;
 
 /*
- * offset from end of service tree
+ * offset from end of queue service tree for idle class
  */
 #define CFQ_IDLE_DELAY		(NSEC_PER_SEC / 5)
+/* offset from end of group service tree under time slice mode */
+#define CFQ_SLICE_MODE_GROUP_DELAY (NSEC_PER_SEC / 5)
+/* offset from end of group service under IOPS mode */
+#define CFQ_IOPS_MODE_GROUP_DELAY (HZ / 5)
 
 /*
  * below this threshold, we consider thinktime immediate
@@ -82,13 +86,14 @@ struct cfq_ttime {
  * move this into the elevator for the rq sorting as well.
  */
 struct cfq_rb_root {
-	struct rb_root rb;
-	struct rb_node *left;
+	struct rb_root_cached rb;
+	struct rb_node *rb_rightmost;
 	unsigned count;
 	u64 min_vdisktime;
 	struct cfq_ttime ttime;
 };
-#define CFQ_RB_ROOT	(struct cfq_rb_root) { .rb = RB_ROOT, \
+#define CFQ_RB_ROOT	(struct cfq_rb_root) { .rb = RB_ROOT_CACHED, \
+			.rb_rightmost = NULL,			     \
 			.ttime = {.last_end_request = ktime_get_ns(),},}
 
 /*
@@ -977,21 +982,11 @@ static inline u64 max_vdisktime(u64 min_vdisktime, u64 vdisktime)
 	return min_vdisktime;
 }
 
-static inline u64 min_vdisktime(u64 min_vdisktime, u64 vdisktime)
-{
-	s64 delta = (s64)(vdisktime - min_vdisktime);
-	if (delta < 0)
-		min_vdisktime = vdisktime;
-
-	return min_vdisktime;
-}
-
 static void update_min_vdisktime(struct cfq_rb_root *st)
 {
-	struct cfq_group *cfqg;
+	if (!RB_EMPTY_ROOT(&st->rb.rb_root)) {
+		struct cfq_group *cfqg = rb_entry_cfqg(st->rb.rb_leftmost);
 
-	if (st->left) {
-		cfqg = rb_entry_cfqg(st->left);
 		st->min_vdisktime = max_vdisktime(st->min_vdisktime,
 						  cfqg->vdisktime);
 	}
@@ -1173,46 +1168,28 @@ cfq_choose_req(struct cfq_data *cfqd, struct request *rq1, struct request *rq2, 
 	}
 }
 
-/*
- * The below is leftmost cache rbtree addon
- */
 static struct cfq_queue *cfq_rb_first(struct cfq_rb_root *root)
 {
 	/* Service tree is empty */
 	if (!root->count)
 		return NULL;
 
-	if (!root->left)
-		root->left = rb_first(&root->rb);
-
-	if (root->left)
-		return rb_entry(root->left, struct cfq_queue, rb_node);
-
-	return NULL;
+	return rb_entry(rb_first_cached(&root->rb), struct cfq_queue, rb_node);
 }
 
 static struct cfq_group *cfq_rb_first_group(struct cfq_rb_root *root)
 {
-	if (!root->left)
-		root->left = rb_first(&root->rb);
-
-	if (root->left)
-		return rb_entry_cfqg(root->left);
-
-	return NULL;
-}
-
-static void rb_erase_init(struct rb_node *n, struct rb_root *root)
-{
-	rb_erase(n, root);
-	RB_CLEAR_NODE(n);
+	return rb_entry_cfqg(rb_first_cached(&root->rb));
 }
 
 static void cfq_rb_erase(struct rb_node *n, struct cfq_rb_root *root)
 {
-	if (root->left == n)
-		root->left = NULL;
-	rb_erase_init(n, &root->rb);
+	if (root->rb_rightmost == n)
+		root->rb_rightmost = rb_prev(n);
+
+	rb_erase_cached(n, &root->rb);
+	RB_CLEAR_NODE(n);
+
 	--root->count;
 }
 
@@ -1262,29 +1239,30 @@ cfqg_key(struct cfq_rb_root *st, struct cfq_group *cfqg)
 static void
 __cfq_group_service_tree_add(struct cfq_rb_root *st, struct cfq_group *cfqg)
 {
-	struct rb_node **node = &st->rb.rb_node;
+	struct rb_node **node = &st->rb.rb_root.rb_node;
 	struct rb_node *parent = NULL;
 	struct cfq_group *__cfqg;
 	s64 key = cfqg_key(st, cfqg);
-	int left = 1;
+	bool leftmost = true, rightmost = true;
 
 	while (*node != NULL) {
 		parent = *node;
 		__cfqg = rb_entry_cfqg(parent);
 
-		if (key < cfqg_key(st, __cfqg))
+		if (key < cfqg_key(st, __cfqg)) {
 			node = &parent->rb_left;
-		else {
+			rightmost = false;
+		} else {
 			node = &parent->rb_right;
-			left = 0;
+			leftmost = false;
 		}
 	}
 
-	if (left)
-		st->left = &cfqg->rb_node;
+	if (rightmost)
+		st->rb_rightmost = &cfqg->rb_node;
 
 	rb_link_node(&cfqg->rb_node, parent, node);
-	rb_insert_color(&cfqg->rb_node, &st->rb);
+	rb_insert_color_cached(&cfqg->rb_node, &st->rb, leftmost);
 }
 
 /*
@@ -1361,6 +1339,14 @@ cfq_group_service_tree_add(struct cfq_rb_root *st, struct cfq_group *cfqg)
 	cfqg->vfraction = max_t(unsigned, vfr, 1);
 }
 
+static inline u64 cfq_get_cfqg_vdisktime_delay(struct cfq_data *cfqd)
+{
+	if (!iops_mode(cfqd))
+		return CFQ_SLICE_MODE_GROUP_DELAY;
+	else
+		return CFQ_IOPS_MODE_GROUP_DELAY;
+}
+
 static void
 cfq_group_notify_queue_add(struct cfq_data *cfqd, struct cfq_group *cfqg)
 {
@@ -1377,10 +1363,11 @@ cfq_group_notify_queue_add(struct cfq_data *cfqd, struct cfq_group *cfqg)
 	 * so that groups get lesser vtime based on their weights, so that
 	 * if group does not loose all if it was not continuously backlogged.
 	 */
-	n = rb_last(&st->rb);
+	n = st->rb_rightmost;
 	if (n) {
 		__cfqg = rb_entry_cfqg(n);
-		cfqg->vdisktime = __cfqg->vdisktime + CFQ_IDLE_DELAY;
+		cfqg->vdisktime = __cfqg->vdisktime +
+			cfq_get_cfqg_vdisktime_delay(cfqd);
 	} else
 		cfqg->vdisktime = st->min_vdisktime;
 	cfq_group_service_tree_add(st, cfqg);
@@ -2042,14 +2029,14 @@ static void cfq_service_tree_add(struct cfq_data *cfqd, struct cfq_queue *cfqq,
 	struct cfq_queue *__cfqq;
 	u64 rb_key;
 	struct cfq_rb_root *st;
-	int left;
+	bool leftmost = true;
 	int new_cfqq = 1;
 	u64 now = ktime_get_ns();
 
 	st = st_for(cfqq->cfqg, cfqq_class(cfqq), cfqq_type(cfqq));
 	if (cfq_class_idle(cfqq)) {
 		rb_key = CFQ_IDLE_DELAY;
-		parent = rb_last(&st->rb);
+		parent = st->rb_rightmost;
 		if (parent && parent != &cfqq->rb_node) {
 			__cfqq = rb_entry(parent, struct cfq_queue, rb_node);
 			rb_key += __cfqq->rb_key;
@@ -2083,10 +2070,9 @@ static void cfq_service_tree_add(struct cfq_data *cfqd, struct cfq_queue *cfqq,
 		cfqq->service_tree = NULL;
 	}
 
-	left = 1;
 	parent = NULL;
 	cfqq->service_tree = st;
-	p = &st->rb.rb_node;
+	p = &st->rb.rb_root.rb_node;
 	while (*p) {
 		parent = *p;
 		__cfqq = rb_entry(parent, struct cfq_queue, rb_node);
@@ -2098,16 +2084,13 @@ static void cfq_service_tree_add(struct cfq_data *cfqd, struct cfq_queue *cfqq,
 			p = &parent->rb_left;
 		else {
 			p = &parent->rb_right;
-			left = 0;
+			leftmost = false;
 		}
 	}
 
-	if (left)
-		st->left = &cfqq->rb_node;
-
 	cfqq->rb_key = rb_key;
 	rb_link_node(&cfqq->rb_node, parent, p);
-	rb_insert_color(&cfqq->rb_node, &st->rb);
+	rb_insert_color_cached(&cfqq->rb_node, &st->rb, leftmost);
 	st->count++;
 	if (add_front || !new_cfqq)
 		return;
@@ -2359,7 +2342,7 @@ static int cfq_merge(struct request_queue *q, struct request **req,
 	struct request *__rq;
 
 	__rq = cfq_find_rq_fmerge(cfqd, bio);
-	if (__rq && elv_rq_merge_ok(__rq, bio)) {
+	if (__rq && elv_bio_merge_ok(__rq, bio)) {
 		*req = __rq;
 		return ELEVATOR_FRONT_MERGE;
 	}
@@ -2416,8 +2399,8 @@ cfq_merged_requests(struct request_queue *q, struct request *rq,
 		cfq_del_cfqq_rr(cfqd, cfqq);
 }
 
-static int cfq_allow_merge(struct request_queue *q, struct request *rq,
-			   struct bio *bio)
+static int cfq_allow_bio_merge(struct request_queue *q, struct request *rq,
+			       struct bio *bio)
 {
 	struct cfq_data *cfqd = q->elevator->elevator_data;
 	struct cfq_io_cq *cic;
@@ -2439,6 +2422,12 @@ static int cfq_allow_merge(struct request_queue *q, struct request *rq,
 
 	cfqq = cic_to_cfqq(cic, cfq_bio_sync(bio));
 	return cfqq == RQ_CFQQ(rq);
+}
+
+static int cfq_allow_rq_merge(struct request_queue *q, struct request *rq,
+			      struct request *next)
+{
+	return RQ_CFQQ(rq) == RQ_CFQQ(next);
 }
 
 static inline void cfq_del_timer(struct cfq_data *cfqd, struct cfq_queue *cfqq)
@@ -2547,7 +2536,7 @@ static struct cfq_queue *cfq_get_next_queue(struct cfq_data *cfqd)
 	/* There is nothing to dispatch */
 	if (!st)
 		return NULL;
-	if (RB_EMPTY_ROOT(&st->rb))
+	if (RB_EMPTY_ROOT(&st->rb.rb_root))
 		return NULL;
 	return cfq_rb_first(st);
 }
@@ -2566,9 +2555,11 @@ static struct cfq_queue *cfq_get_next_queue_forced(struct cfq_data *cfqd)
 	if (!cfqg)
 		return NULL;
 
-	for_each_cfqg_st(cfqg, i, j, st)
-		if ((cfqq = cfq_rb_first(st)) != NULL)
+	for_each_cfqg_st(cfqg, i, j, st) {
+		cfqq = cfq_rb_first(st);
+		if (cfqq)
 			return cfqq;
+	}
 	return NULL;
 }
 
@@ -2853,6 +2844,7 @@ static struct request *cfq_check_fifo(struct cfq_queue *cfqq)
 	if (ktime_get_ns() < rq->fifo_time)
 		rq = NULL;
 
+	cfq_log_cfqq(cfqq->cfqd, cfqq, "fifo=%p", rq);
 	return rq;
 }
 
@@ -3033,7 +3025,7 @@ static struct cfq_group *cfq_get_next_cfqg(struct cfq_data *cfqd)
 	struct cfq_rb_root *st = &cfqd->grp_service_tree;
 	struct cfq_group *cfqg;
 
-	if (RB_EMPTY_ROOT(&st->rb))
+	if (RB_EMPTY_ROOT(&st->rb.rb_root))
 		return NULL;
 	cfqg = cfq_rb_first_group(st);
 	update_min_vdisktime(st);
@@ -3230,9 +3222,6 @@ static bool cfq_may_dispatch(struct cfq_data *cfqd, struct cfq_queue *cfqq)
 {
 	unsigned int max_dispatch;
 
-	if (cfq_cfqq_must_dispatch(cfqq))
-		return true;
-
 	/*
 	 * Drain async requests before we start sync IO
 	 */
@@ -3324,20 +3313,15 @@ static bool cfq_dispatch_request(struct cfq_data *cfqd, struct cfq_queue *cfqq)
 
 	BUG_ON(RB_EMPTY_ROOT(&cfqq->sort_list));
 
-	rq = cfq_check_fifo(cfqq);
-	if (rq)
-		cfq_mark_cfqq_must_dispatch(cfqq);
-
 	if (!cfq_may_dispatch(cfqd, cfqq))
 		return false;
 
 	/*
 	 * follow expired path, else get first next available
 	 */
+	rq = cfq_check_fifo(cfqq);
 	if (!rq)
 		rq = cfqq->next_rq;
-	else
-		cfq_log_cfqq(cfqq->cfqd, cfqq, "fifo=%p", rq);
 
 	/*
 	 * insert request into driver dispatch list
@@ -3662,6 +3646,8 @@ retry:
 		}
 
 		if (cfqq) {
+			/* cfq_init_cfqq() assumes cfqq->ioprio_class is initialized. */
+			cfqq->ioprio_class = IOPRIO_CLASS_NONE;
 			cfq_init_cfqq(cfqd, cfqq, current->pid, is_sync);
 			cfq_init_prio_data(cfqq, cic);
 			cfq_link_cfqq_cfqg(cfqq, cfqg);
@@ -3848,7 +3834,7 @@ cfq_should_preempt(struct cfq_data *cfqd, struct cfq_queue *new_cfqq,
 	 * if the new request is sync, but the currently running queue is
 	 * not, let the sync request have priority.
 	 */
-	if (rq_is_sync(rq) && !cfq_cfqq_sync(cfqq) && !cfq_cfqq_must_dispatch(cfqq))
+	if (rq_is_sync(rq) && !cfq_cfqq_sync(cfqq))
 		return true;
 
 	/*
@@ -4551,18 +4537,6 @@ out_free:
 	return ret;
 }
 
-static void cfq_registered_queue(struct request_queue *q)
-{
-	struct elevator_queue *e = q->elevator;
-	struct cfq_data *cfqd = e->elevator_data;
-
-	/*
-	 * Default to IOPS mode with no idling for SSDs
-	 */
-	if (blk_queue_nonrot(q))
-		cfqd->cfq_slice_idle = 0;
-}
-
 /*
  * sysfs parts below -->
  */
@@ -4572,13 +4546,12 @@ cfq_var_show(unsigned int var, char *page)
 	return sprintf(page, "%u\n", var);
 }
 
-static ssize_t
-cfq_var_store(unsigned int *var, const char *page, size_t count)
+static void
+cfq_var_store(unsigned int *var, const char *page)
 {
 	char *p = (char *) page;
 
 	*var = simple_strtoul(p, &p, 10);
-	return count;
 }
 
 #define SHOW_FUNCTION(__FUNC, __VAR, __CONV)				\
@@ -4624,7 +4597,7 @@ static ssize_t __FUNC(struct elevator_queue *e, const char *page, size_t count)	
 {									\
 	struct cfq_data *cfqd = e->elevator_data;			\
 	unsigned int __data;						\
-	int ret = cfq_var_store(&__data, (page), count);		\
+	cfq_var_store(&__data, (page));					\
 	if (__data < (MIN))						\
 		__data = (MIN);						\
 	else if (__data > (MAX))					\
@@ -4633,7 +4606,7 @@ static ssize_t __FUNC(struct elevator_queue *e, const char *page, size_t count)	
 		*(__PTR) = (u64)__data * NSEC_PER_MSEC;			\
 	else								\
 		*(__PTR) = __data;					\
-	return ret;							\
+	return count;							\
 }
 STORE_FUNCTION(cfq_quantum_store, &cfqd->cfq_quantum, 1, UINT_MAX, 0);
 STORE_FUNCTION(cfq_fifo_expire_sync_store, &cfqd->cfq_fifo_expire[1], 1,
@@ -4658,13 +4631,13 @@ static ssize_t __FUNC(struct elevator_queue *e, const char *page, size_t count)	
 {									\
 	struct cfq_data *cfqd = e->elevator_data;			\
 	unsigned int __data;						\
-	int ret = cfq_var_store(&__data, (page), count);		\
+	cfq_var_store(&__data, (page));					\
 	if (__data < (MIN))						\
 		__data = (MIN);						\
 	else if (__data > (MAX))					\
 		__data = (MAX);						\
 	*(__PTR) = (u64)__data * NSEC_PER_USEC;				\
-	return ret;							\
+	return count;							\
 }
 USEC_STORE_FUNCTION(cfq_slice_idle_us_store, &cfqd->cfq_slice_idle, 0, UINT_MAX);
 USEC_STORE_FUNCTION(cfq_group_idle_us_store, &cfqd->cfq_group_idle, 0, UINT_MAX);
@@ -4702,7 +4675,8 @@ static struct elevator_type iosched_cfq = {
 		.elevator_merge_fn = 		cfq_merge,
 		.elevator_merged_fn =		cfq_merged_request,
 		.elevator_merge_req_fn =	cfq_merged_requests,
-		.elevator_allow_merge_fn =	cfq_allow_merge,
+		.elevator_allow_bio_merge_fn =	cfq_allow_bio_merge,
+		.elevator_allow_rq_merge_fn =	cfq_allow_rq_merge,
 		.elevator_bio_merged_fn =	cfq_bio_merged,
 		.elevator_dispatch_fn =		cfq_dispatch_requests,
 		.elevator_add_req_fn =		cfq_insert_request,
@@ -4718,7 +4692,6 @@ static struct elevator_type iosched_cfq = {
 		.elevator_may_queue_fn =	cfq_may_queue,
 		.elevator_init_fn =		cfq_init_queue,
 		.elevator_exit_fn =		cfq_exit_queue,
-		.elevator_registered_fn =	cfq_registered_queue,
 	},
 	.icq_size	=	sizeof(struct cfq_io_cq),
 	.icq_align	=	__alignof__(struct cfq_io_cq),
