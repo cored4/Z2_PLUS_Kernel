@@ -15,8 +15,7 @@
 	aliases {
 		i2c1 = &i2c_1;
 		i2c9 = &i2c_9;
-		/delete-property/ spi12;
-	};
+};
 };
 
 &soc {
@@ -366,3 +365,8 @@
 &i2c_12 {
 	status = "disabled";
 };
+
+&spi_12 {
+ status = "disabled";
+};
+
